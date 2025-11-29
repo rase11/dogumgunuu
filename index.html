@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Sana Özel Bir Oyun - Mobil</title>
+    <title>Sana Özel Bir Oyun v5 (Final)</title>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
     <style>
         body { 
@@ -11,7 +11,7 @@
             background-color: #000; 
             overflow: hidden; 
             font-family: 'Arial Black', sans-serif;
-            touch-action: none; /* Mobilde kaydırmayı engelle */
+            touch-action: none;
         }
         #game-container { 
             width: 100vw; 
@@ -21,21 +21,19 @@
             align-items: center; 
         }
 
-        /* DİK TUTMA UYARISI İÇİN STİL */
+        /* UYARI EKRANI (DİK TUTULURSA) */
         #orientation-warning {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
             background: #000;
             color: #fff;
-            display: none; /* Başlangıçta gizli */
+            display: none;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             z-index: 9999;
             text-align: center;
         }
-        
-        /* Sadece ekran dikse (portrait) uyarıyı göster */
         @media screen and (orientation: portrait) {
             #orientation-warning { display: flex; }
             #game-container { display: none; }
@@ -47,7 +45,7 @@
 <div id="orientation-warning">
     <h1>🔄</h1>
     <h2>Lütfen Telefonu Yan Çevir</h2>
-    <p>Oyun sadece yatay modda oynanabilir.</p>
+    <p>Oyun keyfi için yatay tutman lazım.</p>
 </div>
 
 <div id="game-container"></div>
@@ -57,8 +55,7 @@
         type: Phaser.AUTO,
         parent: 'game-container',
         scale: {
-            // MOBİL İÇİN KRİTİK AYAR:
-            mode: Phaser.Scale.RESIZE, // Ekran ne kadarsa oyun o kadar genişlesin
+            mode: Phaser.Scale.RESIZE,
             width: '100%',
             height: '100%',
             autoCenter: Phaser.Scale.CENTER_BOTH
@@ -68,7 +65,7 @@
         physics: {
             default: 'arcade',
             arcade: {
-                gravity: { y: 600 },
+                gravity: { y: 1500 }, // YERÇEKİMİ ARTTI (Daha tok düşüş)
                 debug: false
             }
         },
@@ -94,14 +91,14 @@
     let movingPlatforms;
     let emitter;
     
-    // Mobil Tuşlar
     let btnLeft, btnRight, btnJump;
     let isLeftDown = false;
     let isRightDown = false;
     let isJumpDown = false;
 
-    // Ekran boyutları (Dinamik olacak)
+    // Harita uzunluğu
     let mapWidth = 4000; 
+    let groundY; // Zeminin Y yüksekliği (Dinamik hesaplanacak)
 
     function preload() {
         this.load.audio('theme', 'https://labs.phaser.io/assets/audio/oedipus_wizball_highscore.ogg');
@@ -115,44 +112,50 @@
     }
 
     function create() {
-        // --- TAM EKRAN MANTIĞI ---
-        // Ekrana dokununca tam ekran yap (Tarayıcı çubukları gitsin)
+        // Tam ekran yapma
         this.input.once('pointerdown', () => {
-            if (this.scale.isFullscreen) return;
-            this.scale.startFullscreen();
+            if (!this.scale.isFullscreen && this.scale.startFullscreen) {
+                this.scale.startFullscreen();
+            }
         });
 
-        // --- MÜZİK ---
+        // Müzik
         music = this.sound.add('theme', { loop: true, volume: 0.5 });
         this.input.once('pointerdown', () => { if (!music.isPlaying) music.play(); });
 
-        // --- HARİTA ---
+        // --- ZEMİN AYARLARI ---
+        // Ekranın en altından 50 piksel yukarısı zemindir.
+        groundY = this.scale.height - 64;
+
         const platforms = this.physics.add.staticGroup();
         
-        // Zemin (Ekran genişledikçe sorun olmasın diye çok uzun yapıyoruz)
-        for (let i = 0; i < mapWidth / 100; i++) {
-            platforms.create(i * 400, this.scale.height - 30, 'ground').setScale(1).refreshBody().setTint(0x2E8B57);
-        }
+        // 1. Ana Zemin (Düşmemesi için boydan boya, ama aralara boşluk koyacağız)
+        createFloor(platforms, 0, 800, groundY); // Başlangıç güvenli alan
+        createFloor(platforms, 1000, 1400, groundY); // Boşluktan sonraki alan
+        createFloor(platforms, 1600, 2400, groundY);
+        createFloor(platforms, 2600, 4000, groundY); // Final yolu
 
-        // --- HAREKETLİ PLATFORMLAR ---
+        // --- GELİŞMİŞ PARKUR (Daha kaliteli engeller) ---
+        // Basamaklar
+        createBlock(platforms, 400, groundY - 100);
+        createBlock(platforms, 600, groundY - 200);
+
+        // Hareketli Platformlar
         movingPlatforms = this.physics.add.group({allowGravity: false, immovable: true});
         
-        // Koordinatları ekran yüksekliğine göre oranlayalım (this.scale.height)
-        let groundY = this.scale.height - 30;
-        
-        let mp1 = movingPlatforms.create(1400, groundY - 150, 'ground').setScale(0.4).setTint(0x8B4513);
-        mp1.setMoveData(1200, 1600, 100);
+        // Büyük boşluğu geçmek için hareketli platform
+        let mp1 = movingPlatforms.create(900, groundY - 150, 'ground').setDisplaySize(150, 32).setTint(0x8B4513);
+        mp1.setMoveData(850, 950, 100);
 
-        let mp2 = movingPlatforms.create(2800, groundY - 200, 'ground').setScale(0.4).setTint(0x8B4513);
-        mp2.setMoveData(2600, 3000, 150);
+        // İkinci zorlu kısım
+        createBlock(platforms, 1800, groundY - 120);
+        createBlock(platforms, 2000, groundY - 240);
+        createBlock(platforms, 2200, groundY - 120);
 
-        // SABİT ENGELLER
-        createObstacle(platforms, 500, groundY - 120, 0.5);
-        createObstacle(platforms, 800, groundY - 220, 0.6);
-        createObstacle(platforms, 1800, groundY - 150, 0.4);
-        createObstacle(platforms, 2100, groundY - 250, 0.5);
-        createObstacle(platforms, 3300, groundY - 120, 0.7);
-        createObstacle(platforms, 3600, groundY - 200, 0.5);
+        // Son düzlük öncesi hareketli
+        let mp2 = movingPlatforms.create(2500, groundY - 100, 'ground').setDisplaySize(120, 32).setTint(0x8B4513);
+        mp2.setMoveData(2450, 2550, 150);
+
 
         // --- EFEKT ---
         emitter = this.add.particles('sparkle').createEmitter({
@@ -165,38 +168,40 @@
             gravityY: -100
         });
 
-        // --- OYUNCU ---
-        player = this.physics.add.sprite(100, groundY - 100, 'prens');
-        player.setDisplaySize(60, 96);
-        player.setBounce(0.1);
-        player.setCollideWorldBounds(false); // Dünyadan düşebilsin
+        // --- OYUNCU (PRENS) ---
+        player = this.physics.add.sprite(100, groundY - 200, 'prens'); // Havadan başlasın
+        player.setDisplaySize(60, 90); // Oranı düzelttik
+        player.setBounce(0.0); // Zıplama sekmesini kapattık (Daha tok his)
+        player.setCollideWorldBounds(false); 
         emitter.startFollow(player);
 
-        // --- PRENSES ---
-        princess = this.physics.add.staticSprite(mapWidth - 200, groundY - 100, 'prenses');
-        princess.setDisplaySize(60, 96);
+        // --- PRENSES (Yere Basma Ayarı) ---
+        // groundY zemin üstü. Prensesin boyu 90. Merkezden hesaplandığı için:
+        // groundY - (Boy/2) - (ZeminKalınlığı/2)
+        princess = this.physics.add.staticSprite(mapWidth - 300, groundY - 45, 'prenses');
+        princess.setDisplaySize(60, 90);
         princess.setFlipX(true);
 
         // --- KALPLER ---
         hearts = this.physics.add.group();
-        for (let i = 0; i < 15; i++) {
-            let x = Phaser.Math.Between(300, mapWidth - 300);
-            let y = Phaser.Math.Between(100, groundY - 150);
+        for (let i = 0; i < 20; i++) {
+            let x = Phaser.Math.Between(300, mapWidth - 400);
+            let y = Phaser.Math.Between(100, groundY - 200);
+            // Platformların içine denk gelmesin diye basit kontrol yok ama rastgelelik yeterli
             let heart = hearts.create(x, y, 'ground');
             heart.setTint(0xFF0000);
-            heart.setDisplaySize(40, 40);
-            heart.setBounceY(Phaser.Math.FloatBetween(0.4, 0.8));
+            heart.setDisplaySize(30, 30);
+            heart.setAngle(45); // Baklava dilimi gibi dursun
         }
 
         // --- ETKİLEŞİMLER ---
         this.physics.add.collider(player, platforms);
         this.physics.add.collider(player, movingPlatforms, moveWithPlatform, null, this);
         this.physics.add.collider(hearts, platforms);
-        this.physics.add.collider(hearts, movingPlatforms);
         this.physics.add.overlap(player, princess, reachPrincess, null, this);
         this.physics.add.overlap(player, hearts, collectHeart, null, this);
 
-        // --- ARAYÜZ ---
+        // --- UI ---
         scoreText = this.add.text(20, 20, 'Toplanan Sevgi: 0', { 
             fontSize: '28px', fill: '#FFF', fontStyle: 'bold', stroke: '#000', strokeThickness: 4
         }).setScrollFactor(0);
@@ -205,29 +210,45 @@
         this.cameras.main.setBounds(0, 0, mapWidth, this.scale.height);
         this.cameras.main.startFollow(player, true, 0.08, 0.08);
 
-        // --- MOBİL KONTROLLER ---
+        // --- MOBİL TUŞLAR ---
         createVirtualButtons(this);
         cursors = this.input.keyboard.createCursorKeys();
 
         // --- FİNAL RESMİ ---
-        finalImageContainer = this.add.container(this.scale.width/2, this.scale.height/2).setScrollFactor(0).setVisible(false).setDepth(100);
+        finalImageContainer = this.add.container(0, 0).setScrollFactor(0).setVisible(false).setDepth(200);
         finalImage = this.add.image(0, 0, 'finalScene');
         finalImageContainer.add(finalImage);
 
         this.input.addPointer(2);
-
-        // Ekran boyutu değişirse (örn: telefon döndürülürse) tuşları yeniden hizala
         this.scale.on('resize', resize, this);
     }
 
+    // Zemin oluşturma fonksiyonu (Dandikliği önlemek için)
+    function createFloor(group, startX, endX, y) {
+        // Platformun genişliği
+        let width = endX - startX;
+        // Tam ortasını bul (Phaser merkezden yerleştirir)
+        let centerX = startX + (width / 2);
+        
+        let floor = group.create(centerX, y, 'ground');
+        floor.setDisplaySize(width, 64); // Kalın zemin
+        floor.setTint(0x8B4513); // Toprak rengi (Yeşili kaldırdık)
+        floor.refreshBody();
+    }
+
+    // Blok oluşturma fonksiyonu
+    function createBlock(group, x, y) {
+        let block = group.create(x, y, 'ground');
+        block.setDisplaySize(100, 32);
+        block.setTint(0xCD853F); // Daha açık kahve (Peru rengi)
+        block.refreshBody();
+    }
+
     function resize (gameSize) {
-        // Ekran boyutu değişince kamerayı ve tuşları güncelle
         const width = gameSize.width;
         const height = gameSize.height;
-
         this.cameras.main.setViewport(0, 0, width, height);
         
-        // Tuşların yerini güncelle
         if(btnLeft) {
             btnLeft.setPosition(40, height - 130);
             btnRight.setPosition(180, height - 130);
@@ -251,11 +272,11 @@
 
         let isMoving = false;
         if (cursors.left.isDown || isLeftDown) {
-            player.setVelocityX(-220);
+            player.setVelocityX(-300); // Yatay hız arttı
             player.setFlipX(true);
             isMoving = true;
         } else if (cursors.right.isDown || isRightDown) {
-            player.setVelocityX(220);
+            player.setVelocityX(300);
             player.setFlipX(false);
             isMoving = true;
         } else {
@@ -268,13 +289,14 @@
             emitter.on = false;
         }
 
+        // Zıplama Gücü (Gravity 1500 olduğu için burası yüksek olmalı)
         if ((cursors.up.isDown || isJumpDown) && player.body.touching.down) {
-            player.setVelocityY(-550);
+            player.setVelocityY(-750); // Sert zıplama
             emitter.on = false;
         }
 
-        // Dünyadan Düşme Kontrolü
-        if (player.y > this.scale.height + 100) {
+        // Ölüm
+        if (player.y > this.scale.height + 200) {
             this.scene.restart();
             score = 0;
         }
@@ -284,10 +306,6 @@
         if (player.body.touching.down && platform.body.touching.up) {
             player.body.velocity.x += platform.body.velocity.x;
         }
-    }
-
-    function createObstacle(group, x, y, scale) {
-        group.create(x, y, 'ground').setScale(scale).refreshBody().setTint(0x8B4513);
     }
 
     Phaser.GameObjects.Sprite.prototype.setMoveData = function(min, max, speed) {
@@ -309,37 +327,34 @@
         player.setVisible(false);
         princess.setVisible(false);
         scoreText.setVisible(false);
-        btnLeft.setVisible(false);
-        btnRight.setVisible(false);
-        btnJump.setVisible(false);
+        if(btnLeft) btnLeft.setVisible(false);
+        if(btnRight) btnRight.setVisible(false);
+        if(btnJump) btnJump.setVisible(false);
         emitter.setVisible(false);
 
+        // --- FİNAL RESMİ DÜZELTME ---
         finalImageContainer.setVisible(true);
-        finalImageContainer.setPosition(this.scale.width / 2, this.scale.height / 2); // Merkeze al
+        finalImageContainer.setPosition(this.scale.width / 2, this.scale.height / 2);
 
-        // Final resmini ekrana sığdır (Cover modu)
-        const screenWidth = this.scale.width;
-        const screenHeight = this.scale.height;
+        // Ekran boyutları
+        const w = this.scale.width;
+        const h = this.scale.height;
         
-        // Resmi ekranı KAPLAYACAK şekilde ayarla (En/boy oranını bozmadan)
-        // Eğer sığsın (tamamı görünsün) istiyorsan Math.min yap.
-        // Eğer boşluk kalmasın (cover) istiyorsan Math.max yap.
-        const scaleFactor = Math.min(screenWidth / finalImage.width, screenHeight / finalImage.height);
-        finalImage.setScale(scaleFactor);
-        
+        // ZORLA EKRANI KAPLATMA (Stretch/Cover karışımı)
+        // Eğer resmin tam görünmesi (crop olmaması) önemliyse 'setDisplaySize' kullanmayız.
+        // Ama "Kenarlar boş kalmasın" dediğin için:
+        finalImage.setDisplaySize(w, h); // Ekran ne kadarsa o kadar olsun!
+
         this.add.text(this.scale.width / 2, 50, 'MUTLU SON ❤️', {
-            fontSize: '40px', fill: '#fff', stroke: '#000', strokeThickness: 6, fontFamily: 'Arial Black'
-        }).setOrigin(0.5).setScrollFactor(0).setDepth(101);
+            fontSize: '50px', fill: '#fff', stroke: '#000', strokeThickness: 8, fontFamily: 'Arial Black'
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(201);
     }
 
     function createVirtualButtons(scene) {
-        // Tuşları ekranın en altına hizala
         const h = scene.scale.height;
         const w = scene.scale.width;
-        
-        const style = { fontSize: '80px', fill: '#FFF', stroke: '#000', strokeThickness: 4 };
+        const style = { fontSize: '90px', fill: '#FFF', stroke: '#000', strokeThickness: 4 };
 
-        // Konumları h (height) üzerinden hesaplıyoruz
         btnLeft = scene.add.text(40, h - 130, '⬅️', style).setScrollFactor(0).setInteractive();
         btnLeft.on('pointerdown', () => { isLeftDown = true; });
         btnLeft.on('pointerup', () => { isLeftDown = false; });
