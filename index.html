@@ -71,9 +71,8 @@
 
     // Görselleri yükle
     function preload() {
-        this.load.setBaseURL('https://labs.phaser.io/assets/'); // Geçici assetler için
-        this.load.image('sky', 'skies/space3.png'); // Gökyüzü (Geçici)
-        this.load.image('ground', 'sprites/platform.png'); // Platform (Geçici)
+       this.load.image('sky', 'https://labs.phaser.io/assets/skies/space3.png');
+        this.load.image('ground', 'https://labs.phaser.io/assets/sprites/platform.png');
         
         // Bizim oluşturduğumuz görseller (Base64 olarak gömülü - normalde dosya yolu olur)
         // NOT: Gerçek bir projede bu görselleri sunucuya yükleyip linklerini kullanmalısın.
@@ -233,4 +232,5 @@
 </script>
 
 </body>
+
 </html>
