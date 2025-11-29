@@ -27,14 +27,15 @@
 <script>
     const config = {
         type: Phaser.AUTO,
-        parent: 'game-container', // İŞTE EKSİK OLAN SATIR BUYDU!
+        parent: 'game-container',
         scale: {
             mode: Phaser.Scale.FIT,
             autoCenter: Phaser.Scale.CENTER_BOTH,
             width: 800,
             height: 450
         },
-        backgroundColor: '#87CEEB', // Resim yüklenmezse MAVİ görünür (Siyah değil)
+        // İŞTE BURASI ARKA PLANI MAVİ YAPIYOR (Uzay resmi yerine)
+        backgroundColor: '#87CEEB', 
         physics: {
             default: 'arcade',
             arcade: {
@@ -59,8 +60,9 @@
     let isGameFinished = false;
 
     function preload() {
-        // Arka plan ve zemin (İnternetten)
-        this.load.image('sky', 'https://labs.phaser.io/assets/skies/space3.png');
+        // UZAY RESMİNİ SİLDİK!
+
+        // Zemin resmi (İnternetten)
         this.load.image('ground', 'https://labs.phaser.io/assets/sprites/platform.png');
         
         // SENİN DOSYALARIN (İsimler küçük harf olmalı)
@@ -70,10 +72,9 @@
     }
 
     function create() {
-        // 1. Arka Planı Ekle (Hata olursa mavi renk kalır)
-        this.add.image(400, 225, 'sky').setDisplaySize(800, 450); 
+        // UZAY RESMİ EKLEME KODUNU DA SİLDİK!
 
-        // 2. Platformlar
+        // 1. Platformlar
         const platforms = this.physics.add.staticGroup();
         // Zemin
         for (let i = 0; i < 10; i++) {
@@ -85,13 +86,13 @@
         platforms.create(1100, 250, 'ground').setScale(0.5).refreshBody().setTint(0x2E8B57);
         platforms.create(1600, 320, 'ground').setScale(0.5).refreshBody().setTint(0x2E8B57);
 
-        // 3. PRENS (Boyutu 50x80'e zorluyoruz, dev gibi olmasın diye)
+        // 2. PRENS (Boyutu 50x80'e zorluyoruz)
         player = this.physics.add.sprite(100, 300, 'prens');
         player.setDisplaySize(50, 80); 
         player.setBounce(0.1);
         player.setCollideWorldBounds(false);
 
-        // 4. PRENSES
+        // 3. PRENSES
         princess = this.physics.add.staticSprite(2200, 310, 'prenses');
         princess.setDisplaySize(50, 80);
         princess.setFlipX(true); 
