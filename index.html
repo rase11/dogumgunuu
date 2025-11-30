@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Sana Özel Bir Oyun v6.4 (Debug)</title>
+    <title>Sana Özel Bir Oyun v7.0 (Kalite)</title>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
     <style>
         body { 
@@ -62,7 +62,7 @@
         backgroundColor: '#87CEEB',
         antialias: true,
         render: {
-            pixelArt: false,
+            pixelArt: false, // Kaliteli görseller için false yaptık
             antialias: true,
             powerPreference: 'high-performance' 
         },
@@ -70,10 +70,8 @@
             default: 'arcade',
             arcade: {
                 gravity: { y: 1500 },
-                // --- ÖNEMLİ: DEBUG MODU AÇIK ---
-                // Hitboxları görmek için bunu true yaptık. 
-                // Oyun bittiğinde false yapabilirsin.
-                debug: true 
+                // --- DEBUG MODU KAPALI ---
+                debug: false 
             }
         },
         scene: {
@@ -105,17 +103,24 @@
     let isJumpDown = false;
 
     let mapWidth = 4000; 
-    const GROUND_HEIGHT = 64; 
+    const GROUND_HEIGHT = 128; // Yeni zemin görselinin yüksekliği
 
     function preload() {
-        // MÜZİK (Kendi müziğin varsa 'muzik.mp3' olarak buraya yaz)
+        // --- SENİN MÜZİĞİN ---
         this.load.audio('theme', 'muzik.mp3');
         
-        this.load.image('ground', 'https://labs.phaser.io/assets/sprites/platform.png');
+        // --- YENİ KALİTELİ GÖRSELLER ---
+        // Arka Plan
+        this.load.image('skyBackground', 'https://labs.phaser.io/assets/skies/sky2.png');
+        // Zemin (Daha detaylı çimen)
+        this.load.image('ground', 'https://labs.phaser.io/assets/sprites/platform_ground.png');
+        // Blok/Kutu (Ahşap sandık)
+        this.load.image('block', 'https://labs.phaser.io/assets/sprites/crate.png');
+
         this.load.image('sparkle', 'https://labs.phaser.io/assets/particles/blue.png');
         this.load.image('heart', 'https://labs.phaser.io/assets/sprites/heart.png');
-        this.load.image('skyBackground', 'https://labs.phaser.io/assets/skies/clouds.png'); 
         
+        // SENİN RESİMLERİN
         this.load.image('prens', 'prens.png');
         this.load.image('prenses', 'prenses.png');
         this.load.image('finalScene', 'final.png');
@@ -131,6 +136,7 @@
         music = this.sound.add('theme', { loop: true, volume: 0.5 });
         this.input.once('pointerdown', () => { if (!music.isPlaying) music.play(); });
 
+        // --- KALİTELİ ARKA PLAN ---
         background = this.add.tileSprite(0, 0, this.scale.width, this.scale.height, 'skyBackground');
         background.setOrigin(0, 0);
         background.setScrollFactor(0);
@@ -142,7 +148,7 @@
 
         const platforms = this.physics.add.staticGroup();
         
-        // ZEMİNLER
+        // ZEMİNLER (Yeni görselle)
         createFloor(this, platforms, 0, 800);
         createFloor(this, platforms, 1000, 1500);
         createFloor(this, platforms, 1700, 2400);
@@ -150,21 +156,21 @@
 
         const bottomY = this.scale.height - GROUND_HEIGHT;
 
-        // ENGELLER (Daha sıcak renkler)
-        createBlock(platforms, 450, bottomY - 60);
-        createBlock(platforms, 650, bottomY - 160);
+        // ENGELLER (Ahşap sandıklar)
+        createBlock(platforms, 450, bottomY - 32); // Yükseklik ayarı
+        createBlock(platforms, 650, bottomY - 132);
 
         movingPlatforms = this.physics.add.group({allowGravity: false, immovable: true});
         
-        // Hareketli platform rengi (Daha koyu ahşap)
-        let mp1 = movingPlatforms.create(900, bottomY - 100, 'ground').setDisplaySize(150, 32).setTint(0x654321);
+        // Hareketli platform (Zemin görselini kullanmaya devam edebiliriz)
+        let mp1 = movingPlatforms.create(900, bottomY - 100, 'ground').setDisplaySize(150, 40);
         mp1.setMoveData(850, 950, 100);
 
-        createBlock(platforms, 1800, bottomY - 80);
-        createBlock(platforms, 2000, bottomY - 200);
-        createBlock(platforms, 2200, bottomY - 80);
+        createBlock(platforms, 1800, bottomY - 64);
+        createBlock(platforms, 2000, bottomY - 192);
+        createBlock(platforms, 2200, bottomY - 64);
 
-        let mp2 = movingPlatforms.create(2500, bottomY - 50, 'ground').setDisplaySize(120, 32).setTint(0x654321);
+        let mp2 = movingPlatforms.create(2500, bottomY - 50, 'ground').setDisplaySize(120, 40);
         mp2.setMoveData(2450, 2550, 150);
 
         emitter = this.add.particles('sparkle').createEmitter({
@@ -172,17 +178,17 @@
             blendMode: 'ADD', on: false, lifespan: 300, gravityY: -100
         });
 
-        // --- PRENS ve HITBOX AYARI ---
+        // --- PRENS (YERDEN ÇIKARILDI VE HITBOX AYARLANDI) ---
         player = this.physics.add.sprite(100, bottomY, 'prens');
-        player.setOrigin(0.5, 1); 
+        player.setOrigin(0.5, 1); // Ayaklarından hizala
         player.setDisplaySize(60, 90); // Görsel boyut
 
-        // --- KRİTİK NOKTA: HITBOX AYARI ---
-        // Buradaki sayılarla oynayarak en doğru vuruş alanını bulmalısın.
-        // setSize(Genişlik, Yükseklik) -> Mavi kutunun boyutu
-        // setOffset(X, Y) -> Mavi kutunun resme göre konumu
-        player.body.setSize(40, 75); 
-        player.body.setOffset(10, 15); 
+        // --- PRENS HITBOX AYARI (KENDİN DÜZENLE) ---
+        // setSize(Genişlik, Yükseklik) -> Prens'in fiziksel vücudunun boyutu
+        // setOffset(X, Y) -> Vücudun resme göre konumu (Sağa/sola, yukarı/aşağı kaydırma)
+        // Başlangıç için görsel boyutuna yakın bir değer verdim, buradan değiştirebilirsin.
+        player.body.setSize(50, 85); 
+        player.body.setOffset(5, 5); 
         
         player.setBounce(0.0); 
         player.setCollideWorldBounds(false); 
@@ -193,9 +199,9 @@
         princess.setOrigin(0.5, 1);
         princess.setDisplaySize(60, 90);
         princess.setFlipX(true);
-        // Prensesin hitbox'ını da görseline göre ayarla
-        princess.body.setSize(40, 80);
-        princess.body.setOffset(10, 10);
+        // Prensesin hitbox'ı görseline uygun olsun
+        princess.body.setSize(50, 85);
+        princess.body.setOffset(5, 5);
         princess.refreshBody(); 
 
         hearts = this.physics.add.group();
@@ -205,7 +211,6 @@
             let heart = hearts.create(x, y, 'heart');
             heart.setDisplaySize(35, 35); 
             heart.setBounceY(Phaser.Math.FloatBetween(0.4, 0.8));
-            // Kalplerin hitbox'ını biraz küçültelim ki alması daha doğal olsun
             heart.body.setCircle(15); 
         }
 
@@ -239,19 +244,23 @@
         let centerX = startX + (width / 2);
         let y = scene.scale.height; 
         
+        // Yeni zemin görselini kullan
         let floor = group.create(centerX, y, 'ground');
         floor.setOrigin(0.5, 1); 
-        floor.setDisplaySize(width, GROUND_HEIGHT);
-        // Daha canlı çimen rengi
-        floor.setTint(0x2ecc71); 
+        
+        // Görselin orijinal en/boy oranını korumak için setScale kullanıyoruz
+        // Genişliği ayarla, yükseklik otomatik oranlansın
+        let scaleX = width / floor.width;
+        floor.setScale(scaleX, 1); // Yüksekliği orijinal bırak (128px)
+        
+        // Fiziksel gövdeyi görselin yeni boyutuna göre güncelle
         floor.refreshBody();
     }
 
     function createBlock(group, x, y) {
-        let block = group.create(x, y, 'ground');
-        block.setDisplaySize(100, 32);
-        // Kiremit/Toprak tonu
-        block.setTint(0xa0522d); 
+        // Ahşap sandık görselini kullan
+        let block = group.create(x, y, 'block');
+        block.setDisplaySize(64, 64); // Kare sandıklar
         block.refreshBody();
     }
 
@@ -374,4 +383,3 @@
 
 </body>
 </html>
-
