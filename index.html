@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Sana Özel Bir Oyun v6.3</title>
+    <title>Sana Özel Bir Oyun v6.4 (Debug)</title>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
     <style>
         body { 
@@ -70,7 +70,10 @@
             default: 'arcade',
             arcade: {
                 gravity: { y: 1500 },
-                debug: false
+                // --- ÖNEMLİ: DEBUG MODU AÇIK ---
+                // Hitboxları görmek için bunu true yaptık. 
+                // Oyun bittiğinde false yapabilirsin.
+                debug: true 
             }
         },
         scene: {
@@ -105,7 +108,9 @@
     const GROUND_HEIGHT = 64; 
 
     function preload() {
-        this.load.audio('theme', 'jenerik.mp3');
+        // MÜZİK (Kendi müziğin varsa 'muzik.mp3' olarak buraya yaz)
+        this.load.audio('theme', 'https://labs.phaser.io/assets/audio/oedipus_wizball_highscore.ogg');
+        
         this.load.image('ground', 'https://labs.phaser.io/assets/sprites/platform.png');
         this.load.image('sparkle', 'https://labs.phaser.io/assets/particles/blue.png');
         this.load.image('heart', 'https://labs.phaser.io/assets/sprites/heart.png');
@@ -145,20 +150,21 @@
 
         const bottomY = this.scale.height - GROUND_HEIGHT;
 
-        // ENGELLER
+        // ENGELLER (Daha sıcak renkler)
         createBlock(platforms, 450, bottomY - 60);
         createBlock(platforms, 650, bottomY - 160);
 
         movingPlatforms = this.physics.add.group({allowGravity: false, immovable: true});
         
-        let mp1 = movingPlatforms.create(900, bottomY - 100, 'ground').setDisplaySize(150, 32).setTint(0x8B4513);
+        // Hareketli platform rengi (Daha koyu ahşap)
+        let mp1 = movingPlatforms.create(900, bottomY - 100, 'ground').setDisplaySize(150, 32).setTint(0x654321);
         mp1.setMoveData(850, 950, 100);
 
         createBlock(platforms, 1800, bottomY - 80);
         createBlock(platforms, 2000, bottomY - 200);
         createBlock(platforms, 2200, bottomY - 80);
 
-        let mp2 = movingPlatforms.create(2500, bottomY - 50, 'ground').setDisplaySize(120, 32).setTint(0x8B4513);
+        let mp2 = movingPlatforms.create(2500, bottomY - 50, 'ground').setDisplaySize(120, 32).setTint(0x654321);
         mp2.setMoveData(2450, 2550, 150);
 
         emitter = this.add.particles('sparkle').createEmitter({
@@ -166,15 +172,17 @@
             blendMode: 'ADD', on: false, lifespan: 300, gravityY: -100
         });
 
-        // --- DÜZELTME BURADA (PRENS) ---
-        // Prens tam olarak zeminin üzerine (bottomY) konuyor.
+        // --- PRENS ve HITBOX AYARI ---
         player = this.physics.add.sprite(100, bottomY, 'prens');
-        
-        player.setOrigin(0.5, 1); // Ayaklarından hizala
-        player.setDisplaySize(60, 90); 
+        player.setOrigin(0.5, 1); 
+        player.setDisplaySize(60, 90); // Görsel boyut
 
-        // HATA GİDERİLDİ: O devasa Hitbox ayarını sildik.
-        // Artık resim neyse vücut da o. Prens havada kalmayacak.
+        // --- KRİTİK NOKTA: HITBOX AYARI ---
+        // Buradaki sayılarla oynayarak en doğru vuruş alanını bulmalısın.
+        // setSize(Genişlik, Yükseklik) -> Mavi kutunun boyutu
+        // setOffset(X, Y) -> Mavi kutunun resme göre konumu
+        player.body.setSize(40, 75); 
+        player.body.setOffset(10, 15); 
         
         player.setBounce(0.0); 
         player.setCollideWorldBounds(false); 
@@ -182,9 +190,12 @@
 
         // --- PRENSES ---
         princess = this.physics.add.staticSprite(mapWidth - 300, bottomY, 'prenses');
-        princess.setOrigin(0.5, 1); // Ayaklarından hizala
+        princess.setOrigin(0.5, 1);
         princess.setDisplaySize(60, 90);
         princess.setFlipX(true);
+        // Prensesin hitbox'ını da görseline göre ayarla
+        princess.body.setSize(40, 80);
+        princess.body.setOffset(10, 10);
         princess.refreshBody(); 
 
         hearts = this.physics.add.group();
@@ -194,6 +205,8 @@
             let heart = hearts.create(x, y, 'heart');
             heart.setDisplaySize(35, 35); 
             heart.setBounceY(Phaser.Math.FloatBetween(0.4, 0.8));
+            // Kalplerin hitbox'ını biraz küçültelim ki alması daha doğal olsun
+            heart.body.setCircle(15); 
         }
 
         this.physics.add.collider(player, platforms);
@@ -229,14 +242,16 @@
         let floor = group.create(centerX, y, 'ground');
         floor.setOrigin(0.5, 1); 
         floor.setDisplaySize(width, GROUND_HEIGHT);
-        floor.setTint(0x32CD32); 
+        // Daha canlı çimen rengi
+        floor.setTint(0x2ecc71); 
         floor.refreshBody();
     }
 
     function createBlock(group, x, y) {
         let block = group.create(x, y, 'ground');
         block.setDisplaySize(100, 32);
-        block.setTint(0x8B4513); 
+        // Kiremit/Toprak tonu
+        block.setTint(0xa0522d); 
         block.refreshBody();
     }
 
@@ -359,6 +374,3 @@
 
 </body>
 </html>
-
-
-
