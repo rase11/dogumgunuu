@@ -347,4 +347,32 @@
         const h = this.scale.height;
         finalImage.setDisplaySize(w, h); // Ekranı kapla
 
-        this.add.text(this.scale.width / 2, 5
+        this.add.text(this.scale.width / 2, 50, 'MUTLU SON ❤️', {
+            fontSize: '50px', fill: '#fff', stroke: '#000', strokeThickness: 8, fontFamily: 'Arial Black'
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(201);
+    }
+
+    function createVirtualButtons(scene) {
+        const h = scene.scale.height;
+        const w = scene.scale.width;
+        const style = { fontSize: '90px', fill: '#FFF', stroke: '#000', strokeThickness: 4 };
+
+        btnLeft = scene.add.text(40, h - 130, '⬅️', style).setScrollFactor(0).setInteractive();
+        btnLeft.on('pointerdown', () => { isLeftDown = true; });
+        btnLeft.on('pointerup', () => { isLeftDown = false; });
+        btnLeft.on('pointerout', () => { isLeftDown = false; });
+
+        btnRight = scene.add.text(180, h - 130, '➡️', style).setScrollFactor(0).setInteractive();
+        btnRight.on('pointerdown', () => { isRightDown = true; });
+        btnRight.on('pointerup', () => { isRightDown = false; });
+        btnRight.on('pointerout', () => { isRightDown = false; });
+
+        btnJump = scene.add.text(w - 150, h - 130, '⏫', style).setScrollFactor(0).setInteractive();
+        btnJump.on('pointerdown', () => { isJumpDown = true; });
+        btnJump.on('pointerup', () => { isJumpDown = false; });
+        btnJump.on('pointerout', () => { isJumpDown = false; });
+    }
+</script>
+
+</body>
+</html>
