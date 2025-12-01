@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Sana Özel Bir Oyun v6.3 (Final Görsel)</title>
+    <title>Sana Özel Bir Oyun v6.3 (Final Fix)</title>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
     <style>
         body { 
@@ -70,7 +70,7 @@
             default: 'arcade',
             arcade: {
                 gravity: { y: 1500 },
-                debug: false
+                debug: false // Çizgiler kapalı
             }
         },
         scene: {
@@ -107,15 +107,16 @@
     function preload() {
         this.load.audio('theme', 'muzik.mp3');
         
-        // --- GÖRSELLER (SENİN İSTEDİĞİN GİBİ) ---
-        // Zemin: Phaser'ın güzel çimenli zemini
+        // --- GÖRSELLERİ GÜZELLEŞTİRDİM ---
+        // Zemin için güzel bir çimen dokusu
         this.load.image('ground', 'https://raw.githubusercontent.com/photonstorm/phaser3-examples/master/public/assets/tilemaps/tiles/super-mario.png');
-        // Kutu: Güzel desenli kutu
+        // Kutu engelleri için ahşap sandık
         this.load.image('block', 'https://raw.githubusercontent.com/photonstorm/phaser3-examples/master/public/assets/sprites/block.png');
         
         this.load.image('sparkle', 'https://labs.phaser.io/assets/particles/blue.png');
         this.load.image('heart', 'https://labs.phaser.io/assets/sprites/heart.png');
-        // Gökyüzü: Bulutlu olan
+        
+        // O sevdiğin bulutlu mavi gökyüzü
         this.load.image('skyBackground', 'https://labs.phaser.io/assets/skies/sky4.png'); 
         
         this.load.image('prens', 'prens.png');
@@ -158,9 +159,8 @@
 
         movingPlatforms = this.physics.add.group({allowGravity: false, immovable: true});
         
-        // Hareketli platform (Zemin görseli kullanıyoruz ama boyasız)
+        // Hareketli platform
         let mp1 = movingPlatforms.create(900, bottomY - 100, 'ground').setDisplaySize(150, 40);
-        // mp1.setTint... SİLDİM (Artık orijinal renginde)
         mp1.setMoveData(850, 950, 100);
 
         createBlock(platforms, 1800, bottomY - 80);
@@ -168,7 +168,6 @@
         createBlock(platforms, 2200, bottomY - 80);
 
         let mp2 = movingPlatforms.create(2500, bottomY - 50, 'ground').setDisplaySize(120, 40);
-        // mp2.setTint... SİLDİM
         mp2.setMoveData(2450, 2550, 150);
 
         emitter = this.add.particles('sparkle').createEmitter({
@@ -176,12 +175,17 @@
             blendMode: 'ADD', on: false, lifespan: 300, gravityY: -100
         });
 
-        // --- PRENS (Senin ayarladığın gibi) ---
+        // --- PRENS AYARLARI ---
         player = this.physics.add.sprite(100, bottomY, 'prens');
-        
         player.setOrigin(0.5, 1); 
-        player.setDisplaySize(60, 120); 
+        player.setDisplaySize(60, 90); // Boyut optimize edildi
 
+        // --- HITBOX DÜZELTMESİ ---
+        // Vücut: 40px genişlik, 75px yükseklik (Kenarlardaki boşlukları atar)
+        player.body.setSize(40, 75); 
+        // Offset: Kutuyu karakterin ortasına hizalar
+        player.body.setOffset(10, 15); 
+        
         player.setBounce(0.0); 
         player.setCollideWorldBounds(false); 
         emitter.startFollow(player);
@@ -189,8 +193,11 @@
         // --- PRENSES ---
         princess = this.physics.add.staticSprite(mapWidth - 300, bottomY, 'prenses');
         princess.setOrigin(0.5, 1);
-        princess.setDisplaySize(70, 110);
+        princess.setDisplaySize(60, 90);
         princess.setFlipX(true);
+        // Prenses hitbox
+        princess.body.setSize(40, 80);
+        princess.body.setOffset(10, 5);
         princess.refreshBody(); 
 
         hearts = this.physics.add.group();
@@ -200,6 +207,7 @@
             let heart = hearts.create(x, y, 'heart');
             heart.setDisplaySize(35, 35); 
             heart.setBounceY(Phaser.Math.FloatBetween(0.4, 0.8));
+            heart.body.setCircle(15);
         }
 
         this.physics.add.collider(player, platforms);
@@ -227,28 +235,30 @@
         this.scale.on('resize', resize, this);
     }
 
+    // --- ZEMİN OLUŞTURMA ---
     function createFloor(scene, group, startX, endX) {
         let width = endX - startX;
         let centerX = startX + (width / 2);
         let y = scene.scale.height; 
         
-        // TileSprite kullanıyoruz ki çimen resmi uzamasın, yan yana döşensin (Daha net görünür)
+        // TileSprite ile çimen döşüyoruz (esnetmek yerine yan yana koyar)
         let floor = scene.add.tileSprite(centerX, y, width, GROUND_HEIGHT, 'ground');
         
-        // Fizik ekle
+        // Fiziği manuel ekliyoruz
         scene.physics.add.existing(floor, true); // true = statik
-        
         floor.setOrigin(0.5, 1); 
-        // floor.setTint(0x32CD32);  <-- BUNU SİLDİM! Artık orijinal renginde
         
-        group.add(floor); // Gruba ekle
+        // .setTint SİLDİM! Artık gerçek renginde.
+        
+        group.add(floor);
     }
 
+    // --- ENGEL OLUŞTURMA ---
     function createBlock(group, x, y) {
-        // 'ground' yerine 'block' resmini kullanıyoruz
+        // 'ground' yerine 'block' görseli kullanıyoruz
         let block = group.create(x, y, 'block');
-        block.setDisplaySize(64, 64); // Kutu boyutu
-        // block.setTint... SİLDİM
+        block.setDisplaySize(64, 64);
+        // .setTint SİLDİM!
         block.refreshBody();
     }
 
