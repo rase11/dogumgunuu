@@ -3,53 +3,120 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Sana Özel Bir Oyun v6.3</title>
+    <title>Sana Özel Bir Oyun v13.7 - Şık Tasarım</title>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
     <style>
+        /* TEMEL AYARLAR */
         body { 
             margin: 0; 
-            background-color: #000; 
+            background-color: #1a1a1a; 
             overflow: hidden; 
-            font-family: 'Arial Black', sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
         }
-        #game-container { 
-            width: 100vw; 
-            height: 100vh; 
+        #game-container { width: 100vw; height: 100vh; }
+        
+        /* CİHAZ YÖNÜ UYARISI */
+        #orientation-warning {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #222; color: #fff; display: none;
+            flex-direction: column; justify-content: center; align-items: center;
+            z-index: 9999; text-align: center;
         }
 
-        /* UYARI EKRANI STİLİ */
-        #orientation-warning {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: #222;
-            color: #fff;
-            display: none;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-            text-align: center;
+        /* --- YENİ ŞIK GAME OVER EKRANI --- */
+        #game-over-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.7); /* Arkadaki oyunu hafif karart */
+            backdrop-filter: blur(5px); /* Arkadaki oyunu bulanıklaştır (modern görünüm) */
+            display: none; /* Başlangıçta gizli */
+            justify-content: center; align-items: center;
+            z-index: 10000; 
         }
-        #orientation-warning h1 { font-size: 50px; margin-bottom: 20px; }
-        
+
+        .modal-card {
+            background: linear-gradient(145deg, #ffffff, #f0f0f0);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            text-align: center;
+            max-width: 400px;
+            width: 80%;
+            border: 4px solid #FFD700; /* Altın sarısı çerçeve */
+            animation: popIn 0.3s ease-out;
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .modal-title {
+            color: #d32f2f;
+            font-size: 28px;
+            font-weight: bold;
+            margin: 0 0 10px 0;
+            font-family: 'Arial Black', sans-serif;
+            text-transform: uppercase;
+        }
+
+        .modal-text {
+            color: #555;
+            font-size: 16px;
+            margin-bottom: 25px;
+        }
+
+        .restart-btn {
+            background: linear-gradient(to bottom, #4facfe 0%, #00f2fe 100%);
+            border: none;
+            color: white;
+            padding: 15px 30px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0, 198, 255, 0.4);
+            transition: transform 0.1s;
+            outline: none;
+            width: 100%;
+            font-family: 'Arial Black', sans-serif;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+        }
+
+        .restart-btn:active {
+            transform: scale(0.95);
+            background: linear-gradient(to bottom, #00f2fe 0%, #4facfe 100%);
+        }
+
         @media screen and (orientation: portrait) {
             #orientation-warning { display: flex; }
             #game-container { display: none; }
+            #game-over-overlay { display: none; }
         }
     </style>
 </head>
 <body>
 
 <div id="orientation-warning">
-    <h1>📱↔️</h1>
+    <div style="font-size: 50px;">📱↔️</div>
     <h2>Lütfen Telefonu Yan Çevir</h2>
-    <p>Oyun keyfi için ekranı döndür.</p>
+    <p>Oyun sadece yatay modda oynanabilir.</p>
+</div>
+
+<div id="game-over-overlay">
+    <div class="modal-card">
+        <div class="modal-title">OYUN BİTTİ</div>
+        <p class="modal-text">Prenses seni bekliyor, pes etme!</p>
+        <button class="restart-btn" ontouchend="restartGameHTML()" onclick="restartGameHTML()">TEKRAR DENE ↻</button>
+    </div>
 </div>
 
 <div id="game-container"></div>
 
 <script>
+    // --- OYUN AYARLARI ---
     const config = {
         type: Phaser.AUTO,
         parent: 'game-container',
@@ -60,163 +127,224 @@
             autoCenter: Phaser.Scale.CENTER_BOTH
         },
         backgroundColor: '#87CEEB',
-        antialias: true,
-        render: {
-            pixelArt: false,
-            antialias: true,
-            powerPreference: 'high-performance' 
-        },
         physics: {
             default: 'arcade',
             arcade: {
-                gravity: { y: 1500 },
+                gravity: { y: 2200 },
                 debug: false
             }
         },
-        scene: {
-            preload: preload,
-            create: create,
-            update: update
-        }
+        scene: { preload: preload, create: create, update: update }
     };
 
     const game = new Phaser.Game(config);
 
-    let player;
-    let princess;
-    let cursors;
-    let finalImage;
-    let finalImageContainer;
-    let isGameFinished = false;
-    let score = 0;
-    let scoreText;
-    let hearts;
-    let music;
-    let movingPlatforms;
-    let emitter;
-    let background;
-    let isGameStarted = false; // Oyunun başlayıp başlamadığını kontrol eder
-    let startContainer; // Giriş ekranı kutusu
-    
-    let btnLeft, btnRight, btnJump;
-    let isLeftDown = false;
-    let isRightDown = false;
-    let isJumpDown = false;
-
-    let mapWidth = 4000; 
-    const GROUND_HEIGHT = 64; 
-
-    function preload() {
-        this.load.audio('theme', 'muzik.mp3');
-        this.load.image('ground', 'https://labs.phaser.io/assets/sprites/platform.png');
-        this.load.image('sparkle', 'https://labs.phaser.io/assets/particles/blue.png');
-        this.load.image('heart', 'https://labs.phaser.io/assets/sprites/heart.png');
-        this.load.image('skyBackground', 'https://labs.phaser.io/assets/skies/clouds.png'); 
+    // --- HTML ÜZERİNDEN YENİDEN BAŞLATMA ---
+    function restartGameHTML() {
+        // Menüyü gizle
+        document.getElementById('game-over-overlay').style.display = 'none';
         
-        this.load.image('prens', 'prens.png');
-        this.load.image('prenses', 'prenses.png');
-        this.load.image('finalScene', 'final.png');
-        this.load.image('kule', 'kule.png');
+        // Oyunu yeniden başlat
+        const gameScene = game.scene.scenes[0];
+        if (gameScene) {
+            gameScene.scene.restart({ isRetry: true });
+        }
     }
 
-    function create() {
-        this.input.once('pointerdown', () => {
-            if (!this.scale.isFullscreen && this.scale.startFullscreen) {
-                this.scale.startFullscreen();
-            }
+    // --- DEĞİŞKENLER ---
+    let player, princess, cursors;
+    let enemies; 
+    let isGameFinished = false;
+    let score = 0;
+    let scoreText, warningText;
+    let hearts, music;
+    let movingPlatforms;
+    let bgStatic, bgParallax;
+    let isGameStarted = false; 
+    let startContainer; 
+    let btnLeft, btnRight, btnJump;
+    let isLeftDown = false, isRightDown = false, isJumpDown = false;
+    let sfxJump, sfxWin, sfxGameOver, sfxCollect;
+
+    let mapWidth = 12000; 
+    const GROUND_HEIGHT = 64; 
+    const TARGET_SCORE = 200; 
+
+    let slideContainer;
+    let photos = ['foto1', 'foto2', 'foto3'];
+    let currentPhotoIndex = 0;
+    let slideImage;
+
+    function preload() {
+        this.load.image('background', 'background.png'); 
+        this.load.image('zemin', 'zemin.jpg'); 
+        
+        // 6'lı Spritesheet (280x786)
+        this.load.spritesheet('prens', 'prens_6li.png', { 
+            frameWidth: 140, 
+            frameHeight: 262 
         });
 
-        music = this.sound.add('theme', { loop: true, volume: 0.5 });
-        this.input.once('pointerdown', () => { if (!music.isPlaying) music.play(); });
+        this.load.image('prenses', 'prenses.png');
+        this.load.image('obstacles', 'Obstacles.png'); 
+        this.load.image('hareketliEngel', 'hareketliEngel.png');
+        this.load.image('kule', 'kule.png');
+        this.load.image('btnSol', 'btnSol.png'); 
+        this.load.image('btnSag', 'btnSag.png'); 
+        this.load.image('btnZip', 'btnZip.png'); 
+        this.load.image('foto1', 'foto1.jpg');
+        this.load.image('foto2', 'foto2.jpg');
+        this.load.image('foto3', 'foto3.jpg');
+        this.load.image('spike', 'spike.png');
+        this.load.image('enemy', 'enemy.png');
+        this.load.image('heart', 'https://labs.phaser.io/assets/sprites/heart.png');
 
-        background = this.add.tileSprite(0, 0, this.scale.width, this.scale.height, 'skyBackground');
-        background.setOrigin(0, 0);
-        background.setScrollFactor(0);
+        this.load.audio('theme', 'muzik.mp3');
+        this.load.audio('ziplama', 'ziplama.mp3');
+        this.load.audio('alkis', 'alkis.mp3');
+        this.load.audio('gameover', 'gameover.mp3'); 
+        this.load.audio('kalp', 'kalp.mp3'); 
+    }
+
+    function create(data) {
+        this.sound.stopAll();
+        isGameFinished = false; 
+        score = 0;
         
-        let scaleX = this.scale.width / background.width;
-        let scaleY = this.scale.height / background.height;
-        let scale = Math.max(scaleX, scaleY);
-        background.setScale(scale);
+        music = this.sound.add('theme', { loop: true, volume: 0.4 });
+        sfxJump = this.sound.add('ziplama', { volume: 0.5 });
+        sfxWin = this.sound.add('alkis', { volume: 0.8 });
+        sfxGameOver = this.sound.add('gameover', { volume: 0.8 });
+        sfxCollect = this.sound.add('kalp', { volume: 0.6 });
+
+        if (data && data.isRetry) {
+            isGameStarted = true;
+            music.play();
+        } else {
+            isGameStarted = false;
+            createStartScreen(this);
+        }
+
+        bgStatic = this.add.image(0, 0, 'background').setOrigin(0, 0).setScrollFactor(0).setDepth(-2);
+        bgStatic.setDisplaySize(this.scale.width, this.scale.height);
+        
+        bgParallax = this.add.tileSprite(0, 0, this.scale.width, this.scale.height, 'background');
+        bgParallax.setOrigin(0, 0).setScrollFactor(0).setAlpha(0.3).setDepth(-1);
 
         const platforms = this.physics.add.staticGroup();
+        const bottomY = this.scale.height - GROUND_HEIGHT;
         
-        // ZEMİNLER
         createFloor(this, platforms, 0, 800);
         createFloor(this, platforms, 1000, 1500);
         createFloor(this, platforms, 1700, 2400);
-        createFloor(this, platforms, 2600, 4000);
+        createFloor(this, platforms, 2600, 4000); 
+        createFloor(this, platforms, 4150, 4800); 
+        createFloor(this, platforms, 5000, 6000); 
+        createFloor(this, platforms, 6300, 7500);
+        createFloor(this, platforms, 7700, 8500); 
+        createFloor(this, platforms, 9500, 10200); 
+        createFloor(this, platforms, 10500, 12000); 
 
-        const bottomY = this.scale.height - GROUND_HEIGHT;
-
-        // ENGELLER
         createBlock(platforms, 450, bottomY - 60);
         createBlock(platforms, 650, bottomY - 160);
-
-        movingPlatforms = this.physics.add.group({allowGravity: false, immovable: true});
-        
-        let mp1 = movingPlatforms.create(900, bottomY - 100, 'ground').setDisplaySize(150, 32).setTint(0x8B4513);
-        mp1.setMoveData(850, 950, 100);
-
         createBlock(platforms, 1800, bottomY - 80);
         createBlock(platforms, 2000, bottomY - 200);
         createBlock(platforms, 2200, bottomY - 80);
+        createBlock(platforms, 4300, bottomY - 90);
+        createBlock(platforms, 4500, bottomY - 180);
+        createBlock(platforms, 4700, bottomY - 270);
+        createBlock(platforms, 5200, bottomY - 200);
+        createBlock(platforms, 5500, bottomY - 200);
+        createBlock(platforms, 6600, bottomY - 100);
+        createBlock(platforms, 6800, bottomY - 220);
+        createBlock(platforms, 7100, bottomY - 100);
+        createBlock(platforms, 8600, bottomY - 100);
+        createBlock(platforms, 8750, bottomY - 180); 
+        createBlock(platforms, 8900, bottomY - 260); 
+        createBlock(platforms, 9100, bottomY - 180); 
+        createBlock(platforms, 9300, bottomY - 100);
+        createBlock(platforms, 9650, bottomY - 100);
+        createBlock(platforms, 9850, bottomY - 220); 
+        createBlock(platforms, 10050, bottomY - 150);
 
-        let mp2 = movingPlatforms.create(2500, bottomY - 50, 'ground').setDisplaySize(120, 32).setTint(0x8B4513);
-        mp2.setMoveData(2450, 2550, 150);
+        movingPlatforms = this.physics.add.group({allowGravity: false, immovable: true});
+        let mp1 = movingPlatforms.create(900, bottomY - 100, 'hareketliEngel').setDisplaySize(150, 32); mp1.setMoveData(850, 950, 100);
+        let mp2 = movingPlatforms.create(2500, bottomY - 50, 'hareketliEngel').setDisplaySize(120, 32); mp2.setMoveData(2450, 2550, 150);
+        let mp3 = movingPlatforms.create(4900, bottomY - 100, 'hareketliEngel').setDisplaySize(140, 32); mp3.setMoveData(4800, 5000, 100);
+        let mp4 = movingPlatforms.create(6150, bottomY - 50, 'hareketliEngel').setDisplaySize(120, 32); mp4.setMoveData(6000, 6300, 150);
+        let mp5 = movingPlatforms.create(10350, bottomY - 100, 'hareketliEngel').setDisplaySize(130, 32); mp5.setMoveData(10250, 10450, 120);
+        let mp6 = movingPlatforms.create(11000, bottomY - 200, 'hareketliEngel').setDisplaySize(100, 32); mp6.setMoveData(10800, 11200, 200);
 
-        emitter = this.add.particles('sparkle').createEmitter({
-            speed: { min: -50, max: 50 }, angle: { min: 0, max: 360 }, scale: { start: 0.2, end: 0 },
-            blendMode: 'ADD', on: false, lifespan: 300, gravityY: -100
+        const spikes = this.physics.add.staticGroup();
+        createSpike(spikes, 700, bottomY);
+        createSpike(spikes, 1250, bottomY);
+        createSpike(spikes, 1900, bottomY);
+        createSpike(spikes, 3200, bottomY);
+        createSpike(spikes, 4400, bottomY);
+        createSpike(spikes, 5350, bottomY);
+        createSpike(spikes, 6500, bottomY);
+        createSpike(spikes, 7400, bottomY);
+        createSpike(spikes, 8100, bottomY); 
+        createSpike(spikes, 9600, bottomY); 
+        createSpike(spikes, 10050, bottomY); 
+        createSpike(spikes, 11500, bottomY); 
+
+        enemies = this.physics.add.group({ allowGravity: true, collideWorldBounds: false });
+        createEnemy(enemies, 1300, bottomY - 50, 150);
+        createEnemy(enemies, 2800, bottomY - 50, 250);
+        createEnemy(enemies, 3500, bottomY - 50, 200);
+        createEnemy(enemies, 5700, bottomY - 50, 200);
+        createEnemy(enemies, 7400, bottomY - 50, 300);
+        createEnemy(enemies, 8400, bottomY - 50, 150);
+        createEnemy(enemies, 9950, bottomY - 50, 100);
+        createEnemy(enemies, 10600, bottomY - 50, 300); 
+        createEnemy(enemies, 11300, bottomY - 50, 100); 
+
+        player = this.physics.add.sprite(100, bottomY - 200, 'prens');
+        player.setOrigin(0.5, 1).setDisplaySize(75, 136).setBounce(0.0).setCollideWorldBounds(false); 
+        
+        this.anims.create({
+            key: 'yuru',
+            frames: this.anims.generateFrameNumbers('prens', { start: 0, end: 5 }), 
+            frameRate: 10,
+            repeat: -1
+        });
+        this.anims.create({
+            key: 'dur',
+            frames: [ { key: 'prens', frame: 0 } ],
+            frameRate: 20
         });
 
-        // --- DÜZELTME BURADA (PRENS) ---
-        // Prens tam olarak zeminin üzerine (bottomY) konuyor.
-        player = this.physics.add.sprite(100, bottomY, 'prens');
-        
-        player.setOrigin(0.5, 1); // Ayaklarından hizala
-        player.setDisplaySize(60, 120); 
-
-        // HATA GİDERİLDİ: O devasa Hitbox ayarını sildik.
-        // Artık resim neyse vücut da o. Prens havada kalmayacak.
-        
-        player.setBounce(0.0); 
-        player.setCollideWorldBounds(false); 
-        emitter.startFollow(player);
-
-        // --- KULE (Prensesin Arkasında) ---
-        // X: Prensesle aynı hizada olsun (mapWidth - 300)
-        // Y: Zeminin tam üstünde (bottomY)
-        // setOrigin(0.5, 1) -> Alt orta noktasından hizala
-        let tower = this.add.image(mapWidth - 150, bottomY + 20, 'kule');
-        tower.setOrigin(0.5, 1); 
-        tower.setDisplaySize(350, 450);
-
-        // --- PRENSES ---
+        let tower = this.add.image(mapWidth - 150, bottomY + 20, 'kule').setOrigin(0.5, 1).setDisplaySize(350, 400);
         princess = this.physics.add.staticSprite(mapWidth - 300, bottomY, 'prenses');
-        princess.setOrigin(0.5, 1); // Ayaklarından hizala
-        princess.setDisplaySize(70, 110);
-        princess.setFlipX(true);
-        princess.refreshBody(); 
+        princess.setOrigin(0.5, 1).setDisplaySize(70, 110).setFlipX(true).refreshBody(); 
 
         hearts = this.physics.add.group();
-        for (let i = 0; i < 20; i++) {
+        for (let i = 0; i < 80; i++) {
             let x = Phaser.Math.Between(300, mapWidth - 400);
             let y = Phaser.Math.Between(100, bottomY - 200);
-            let heart = hearts.create(x, y, 'heart');
-            heart.setDisplaySize(35, 35); 
-            heart.setBounceY(Phaser.Math.FloatBetween(0.4, 0.8));
+            let heart = hearts.create(x, y, 'heart').setDisplaySize(35, 35).setBounceY(Phaser.Math.FloatBetween(0.4, 0.8));
         }
 
         this.physics.add.collider(player, platforms);
         this.physics.add.collider(player, movingPlatforms, moveWithPlatform, null, this);
         this.physics.add.collider(hearts, platforms);
         this.physics.add.collider(hearts, movingPlatforms);
-        this.physics.add.overlap(player, princess, reachPrincess, null, this);
-        this.physics.add.overlap(player, hearts, collectHeart, null, this);
+        this.physics.add.collider(enemies, platforms); 
 
-        scoreText = this.add.text(20, 20, 'Toplanan Sevgi: 0', { 
+        this.physics.add.overlap(player, princess, checkWinCondition, null, this);
+        this.physics.add.overlap(player, hearts, collectHeart, null, this);
+        
+        this.physics.add.collider(player, spikes, hitDanger, null, this); 
+        this.physics.add.collider(player, enemies, hitDanger, null, this); 
+
+        scoreText = this.add.text(20, 20, 'Sevgi: 0 / ' + TARGET_SCORE, { 
             fontSize: '28px', fill: '#FFF', fontStyle: 'bold', stroke: '#000', strokeThickness: 4
         }).setScrollFactor(0);
+
+        warningText = this.add.text(this.scale.width/2, this.scale.height/2, '', {
+            fontSize: '40px', fill: '#FF0000', stroke: '#FFF', strokeThickness: 6, fontStyle:'bold'
+        }).setOrigin(0.5).setScrollFactor(0).setAlpha(0);
 
         this.cameras.main.setBounds(0, 0, mapWidth, this.scale.height);
         this.cameras.main.startFollow(player, true, 0.08, 0.08);
@@ -224,52 +352,86 @@
         createVirtualButtons(this);
         cursors = this.input.keyboard.createCursorKeys();
 
-        finalImageContainer = this.add.container(0, 0).setScrollFactor(0).setVisible(false).setDepth(200);
-        finalImage = this.add.image(0, 0, 'finalScene');
-        finalImageContainer.add(finalImage);
+        slideContainer = this.add.container(0, 0).setScrollFactor(0).setVisible(false).setDepth(200);
+        let darkOverlay = this.add.rectangle(0, 0, this.scale.width, this.scale.height, 0x000000, 1).setOrigin(0,0);
+        slideImage = this.add.image(this.scale.width/2, this.scale.height/2, photos[0]).setOrigin(0.5);
+        let endText = this.add.text(this.scale.width/2, 50, 'MUTLU SON ❤️', {
+            fontSize: '50px', fill: '#fff', stroke: '#000', strokeThickness: 8, fontFamily: 'Arial Black'
+        }).setOrigin(0.5);
+
+        slideContainer.add([darkOverlay, slideImage, endText]);
 
         this.input.addPointer(2);
         this.scale.on('resize', resize, this);
-        
-        createStartScreen(this);
     }
 
     function createFloor(scene, group, startX, endX) {
+        let y = scene.scale.height;
         let width = endX - startX;
-        let centerX = startX + (width / 2);
-        let y = scene.scale.height; 
-        
-        let floor = group.create(centerX, y, 'ground');
-        floor.setOrigin(0.5, 1); 
-        floor.setDisplaySize(width, GROUND_HEIGHT);
-        floor.setTint(0x32CD32); 
-        floor.refreshBody();
+        let floor = group.create(startX + (width / 2), y, 'zemin');
+        floor.setOrigin(0.5, 0).setDisplaySize(width, GROUND_HEIGHT).setY(y - GROUND_HEIGHT).refreshBody();
     }
 
     function createBlock(group, x, y) {
-        let block = group.create(x, y, 'ground');
-        block.setDisplaySize(100, 32);
-        block.setTint(0x8B4513); 
-        block.refreshBody();
+        group.create(x, y, 'obstacles').setDisplaySize(100, 32).refreshBody();
+    }
+
+    function createSpike(group, x, y) {
+        let spike = group.create(x, y, 'spike');
+        spike.setOrigin(0.5, 1);
+        spike.setDisplaySize(60, 60);
+        spike.refreshBody();
+        spike.body.setSize(15, 25);
+        spike.body.setOffset(22, 35);
+    }
+
+    function createEnemy(group, x, y, distance) {
+        let enemy = group.create(x, y, 'enemy');
+        enemy.setOrigin(0.5, 1);
+        enemy.setDisplaySize(60, 60);
+        enemy.startX = x;
+        enemy.travelDistance = distance;
+        enemy.setVelocityX(100); 
+    }
+
+    function hitDanger(player, danger) {
+        if (isGameFinished) return;
+        isGameFinished = true; 
+        
+        player.body.setVelocity(0, 0);
+        player.body.checkCollision.none = true; 
+        player.body.allowGravity = false; 
+        player.setTint(0xff0000); 
+        player.anims.play('dur');
+        
+        if(btnLeft) btnLeft.setVisible(false);
+        if(btnRight) btnRight.setVisible(false);
+        if(btnJump) btnJump.setVisible(false);
+
+        if (music) music.stop();
+        try { sfxGameOver.play(); } catch(e){}
+        
+        // Şık Pop-up'ı göster
+        document.getElementById('game-over-overlay').style.display = 'flex';
     }
 
     function resize (gameSize) {
         const width = gameSize.width;
         const height = gameSize.height;
         this.cameras.main.setViewport(0, 0, width, height);
-        if (background) background.setSize(width, height);
-
+        if (bgStatic) bgStatic.setDisplaySize(width, height);
+        if (bgParallax) bgParallax.setSize(width, height);
+        
         if(btnLeft) {
-            btnLeft.setPosition(40, height - 130);
-            btnRight.setPosition(180, height - 130);
-            btnJump.setPosition(width - 150, height - 130);
+            btnLeft.setPosition(80, height - 80);
+            btnRight.setPosition(220, height - 80);
+            btnJump.setPosition(width - 80, height - 80);
         }
     }
 
     function update() {
-        if (!isGameStarted) return;
-        if (isGameFinished) return;
-        background.tilePositionX = this.cameras.main.scrollX * 0.3;
+        if (!isGameStarted || isGameFinished) return;
+        if (bgParallax) bgParallax.tilePositionX = this.cameras.main.scrollX * 0.25;
 
         movingPlatforms.children.iterate(function (platform) {
             if (platform.moveRight) {
@@ -281,30 +443,44 @@
             }
         });
 
+        if (enemies) {
+            enemies.children.iterate(function (enemy) {
+                if (enemy.x > enemy.startX + enemy.travelDistance) {
+                    enemy.setVelocityX(-100);
+                    enemy.setFlipX(true); 
+                } else if (enemy.x < enemy.startX - enemy.travelDistance) {
+                    enemy.setVelocityX(100);
+                    enemy.setFlipX(false); 
+                }
+            });
+        }
+
         let isMoving = false;
+        
         if (cursors.left.isDown || isLeftDown) {
-            player.setVelocityX(-300);
-            player.setFlipX(true);
+            player.setVelocityX(-350); 
+            player.setFlipX(true); 
+            player.anims.play('yuru', true); 
             isMoving = true;
         } else if (cursors.right.isDown || isRightDown) {
-            player.setVelocityX(300);
-            player.setFlipX(false);
+            player.setVelocityX(350);
+            player.setFlipX(false); 
+            player.anims.play('yuru', true); 
             isMoving = true;
         } else {
             player.setVelocityX(0);
+            if (player.body.touching.down) {
+                player.anims.play('dur', true);
+            }
         }
 
-        if (isMoving && player.body.touching.down) emitter.on = true;
-        else emitter.on = false;
-
-        if ((cursors.up.isDown || isJumpDown) && player.body.touching.down) {
-            player.setVelocityY(-600);
-            emitter.on = false;
+        if ((cursors.up.isDown || isJumpDown) && (player.body.blocked.down || player.body.touching.down)) {
+            player.setVelocityY(-800); 
+            try { sfxJump.play(); } catch(e){}
         }
-
-        if (player.y > this.scale.height + 200) {
-            this.scene.restart();
-            score = 0;
+        
+        if (player.y > this.scale.height + 100) {
+            hitDanger.call(this, player, null);
         }
     }
 
@@ -315,117 +491,115 @@
     }
 
     Phaser.GameObjects.Sprite.prototype.setMoveData = function(min, max, speed) {
-        this.minMoveX = min;
-        this.maxMoveX = max;
-        this.moveSpeed = speed;
-        this.moveRight = true;
+        this.minMoveX = min; this.maxMoveX = max; this.moveSpeed = speed; this.moveRight = true;
     };
 
     function collectHeart (player, heart) {
         heart.disableBody(true, true);
         score += 10;
-        scoreText.setText('Toplanan Sevgi: ' + score);
+        scoreText.setText('Sevgi: ' + score + ' / ' + TARGET_SCORE);
+        try { sfxCollect.play(); } catch(e){}
     }
 
-    function reachPrincess(player, princess) {
+    function checkWinCondition(player, princess) {
+        if (score < TARGET_SCORE) {
+            warningText.setText("Yetersiz Sevgi!\n" + (TARGET_SCORE - score) + " puan daha topla!");
+            warningText.setAlpha(1);
+            this.tweens.add({
+                targets: warningText, alpha: 0, delay: 1500, duration: 1000
+            });
+            player.setVelocityX(player.x < princess.x ? -500 : 500);
+            player.setVelocityY(-300);
+            this.cameras.main.shake(200, 0.01);
+            return;
+        }
+        finishGame(this);
+    }
+
+    function finishGame(scene) {
         isGameFinished = true;
-        this.physics.pause();
+        scene.physics.pause();
         player.setVisible(false);
         princess.setVisible(false);
         scoreText.setVisible(false);
         if(btnLeft) btnLeft.setVisible(false);
         if(btnRight) btnRight.setVisible(false);
         if(btnJump) btnJump.setVisible(false);
-        emitter.setVisible(false);
+        
+        music.stop();
+        try { sfxWin.play(); } catch(e){}
+        startSlideshow(scene);
+    }
 
-        finalImageContainer.setVisible(true);
-        finalImageContainer.setPosition(this.scale.width / 2, this.scale.height / 2);
-        const w = this.scale.width;
-        const h = this.scale.height;
-        finalImage.setDisplaySize(w, h);
-
-        this.add.text(this.scale.width / 2, 50, 'MUTLU SON ❤️', {
-            fontSize: '50px', fill: '#fff', stroke: '#000', strokeThickness: 8, fontFamily: 'Arial Black'
-        }).setOrigin(0.5).setScrollFactor(0).setDepth(201);
+    function startSlideshow(scene) {
+        slideContainer.setVisible(true);
+        slideContainer.setPosition(0,0); 
+        const w = scene.scale.width;
+        const h = scene.scale.height;
+        let bgRect = slideContainer.list[0];
+        bgRect.setSize(w, h);
+        
+        scene.time.addEvent({
+            delay: 3000,
+            callback: () => {
+                currentPhotoIndex = (currentPhotoIndex + 1) % photos.length;
+                scene.tweens.add({
+                    targets: slideImage, alpha: 0, duration: 500,
+                    onComplete: () => {
+                        slideImage.setTexture(photos[currentPhotoIndex]);
+                        let scaleX = (w * 0.8) / slideImage.width;
+                        let scaleY = (h * 0.6) / slideImage.height;
+                        let scale = Math.min(scaleX, scaleY);
+                        slideImage.setScale(scale);
+                        scene.tweens.add({ targets: slideImage, alpha: 1, duration: 500 });
+                    }
+                });
+            },
+            loop: true
+        });
     }
 
     function createVirtualButtons(scene) {
         const h = scene.scale.height;
         const w = scene.scale.width;
-        const style = { fontSize: '90px', fill: '#FFF', stroke: '#000', strokeThickness: 4 };
 
-        btnLeft = scene.add.text(40, h - 130, '⬅️', style).setScrollFactor(0).setInteractive();
-        btnLeft.on('pointerdown', () => { isLeftDown = true; });
-        btnLeft.on('pointerup', () => { isLeftDown = false; });
-        btnLeft.on('pointerout', () => { isLeftDown = false; });
+        btnLeft = scene.add.image(80, h - 80, 'btnSol').setInteractive().setScrollFactor(0).setDepth(100);
+        btnLeft.setDisplaySize(80, 80);
+        btnLeft.on('pointerdown', () => { isLeftDown = true; btnLeft.setAlpha(0.5); });
+        btnLeft.on('pointerup', () => { isLeftDown = false; btnLeft.setAlpha(1); });
+        btnLeft.on('pointerout', () => { isLeftDown = false; btnLeft.setAlpha(1); });
 
-        btnRight = scene.add.text(180, h - 130, '➡️', style).setScrollFactor(0).setInteractive();
-        btnRight.on('pointerdown', () => { isRightDown = true; });
-        btnRight.on('pointerup', () => { isRightDown = false; });
-        btnRight.on('pointerout', () => { isRightDown = false; });
+        btnRight = scene.add.image(220, h - 80, 'btnSag').setInteractive().setScrollFactor(0).setDepth(100);
+        btnRight.setDisplaySize(80, 80);
+        btnRight.on('pointerdown', () => { isRightDown = true; btnRight.setAlpha(0.5); });
+        btnRight.on('pointerup', () => { isRightDown = false; btnRight.setAlpha(1); });
+        btnRight.on('pointerout', () => { isRightDown = false; btnRight.setAlpha(1); });
 
-        btnJump = scene.add.text(w - 150, h - 130, '⏫', style).setScrollFactor(0).setInteractive();
-        btnJump.on('pointerdown', () => { isJumpDown = true; });
-        btnJump.on('pointerup', () => { isJumpDown = false; });
-        btnJump.on('pointerout', () => { isJumpDown = false; });
+        btnJump = scene.add.image(w - 80, h - 80, 'btnZip').setInteractive().setScrollFactor(0).setDepth(100);
+        btnJump.setDisplaySize(80, 80);
+        btnJump.on('pointerdown', () => { isJumpDown = true; btnJump.setAlpha(0.5); });
+        btnJump.on('pointerup', () => { isJumpDown = false; btnJump.setAlpha(1); });
+        btnJump.on('pointerout', () => { isJumpDown = false; btnJump.setAlpha(1); });
     }
 
     function createStartScreen(scene) {
-        // Tüm giriş ekranı elemanlarını tutan grup (Container)
         startContainer = scene.add.container(0, 0).setScrollFactor(0).setDepth(9999);
-        
-        // 1. Siyah Yarı Saydam Perde
-        let overlay = scene.add.rectangle(0, 0, scene.scale.width, scene.scale.height, 0x000000, 0.85);
-        overlay.setOrigin(0, 0);
-        
-        // 2. Başlık Yazısı
+        let overlay = scene.add.rectangle(0, 0, scene.scale.width, scene.scale.height, 0x1a4d7a, 1.0).setOrigin(0);
         let title = scene.add.text(scene.scale.width / 2, scene.scale.height / 2 - 50, 'PRENSESİ KURTAR', {
-            fontSize: '40px', 
-            fill: '#FFF', 
-            fontStyle: 'bold', 
-            stroke: '#000', 
-            strokeThickness: 6,
-            fontFamily: 'Arial Black'
+            fontSize: '50px', fill: '#FFD700', fontStyle: 'bold', stroke: '#FF6B9D', strokeThickness: 6
         }).setOrigin(0.5);
+        let sub = scene.add.text(scene.scale.width/2, scene.scale.height/2 + 20, 'Oynamak için ekrana dokun', {fontSize:'20px'}).setOrigin(0.5);
+        startContainer.add([overlay, title, sub]);
 
-        // 3. Başla Butonu
-        let startBtn = scene.add.text(scene.scale.width / 2, scene.scale.height / 2 + 50, '▶ OYUNA BAŞLA', {
-            fontSize: '32px', 
-            fill: '#0f0', 
-            fontStyle: 'bold', 
-            backgroundColor: '#333', 
-            padding: {x: 20, y: 10}
-        }).setOrigin(0.5).setInteractive(); // Tıklanabilir yap
-
-        // Elemanları gruba ekle
-        startContainer.add([overlay, title, startBtn]);
-
-        // --- BUTONA BASINCA NE OLSUN? ---
-        startBtn.on('pointerdown', () => {
-            isGameStarted = true;       // Kilidi aç
-            startContainer.setVisible(false); // Menüyü gizle
-            
-            // Müzik varsa başlat
-            if (music && !music.isPlaying) {
-                music.play();
-            }
-            
-            // Tam ekran yap (Telefonda güzel görünmesi için)
-            if (scene.scale.startFullscreen) {
-                scene.scale.startFullscreen().catch(() => {});
-            }
-        });
-        
-        // Ekran döndürülürse menüyü ortala
-        scene.scale.on('resize', (gameSize) => {
-            overlay.setSize(gameSize.width, gameSize.height);
-            title.setPosition(gameSize.width/2, gameSize.height/2 - 50);
-            startBtn.setPosition(gameSize.width/2, gameSize.height/2 + 50);
+        let zone = scene.add.zone(0, 0, scene.scale.width, scene.scale.height).setOrigin(0).setInteractive();
+        zone.once('pointerdown', () => {
+            isGameStarted = true;
+            startContainer.destroy();
+            zone.destroy();
+            if (music && !music.isPlaying) music.play();
+            if (scene.scale.startFullscreen) scene.scale.startFullscreen().catch(()=>{});
         });
     }
 </script>
-
 </body>
 </html>
-
-
