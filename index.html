@@ -359,8 +359,8 @@
         princess.setOrigin(0.5, 1).setDisplaySize(70, 110).setFlipX(true).refreshBody(); 
 
         hearts = this.physics.add.group();
-        // 25 KALP (ZOR)
-        for (let i = 0; i < 25; i++) {
+        // 30 KALP (ORTA)
+        for (let i = 0; i < 30; i++) {
             let x = Phaser.Math.Between(300, mapWidth - 400);
             let y = Phaser.Math.Between(100, bottomY - 200);
             let heart = hearts.create(x, y, 'heart').setDisplaySize(35, 35).setBounceY(Phaser.Math.FloatBetween(0.4, 0.8));
@@ -494,6 +494,7 @@
 </script>
 </body>
 </html>
+
 
 
 
